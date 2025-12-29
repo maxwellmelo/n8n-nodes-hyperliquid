@@ -4,9 +4,15 @@ import {
   HyperliquidSignature,
   PlaceOrderAction,
   CancelOrderAction,
+  CancelByCloidAction,
+  ModifyOrderAction,
+  BatchModifyAction,
+  ScheduleCancelAction,
   UpdateLeverageAction,
+  UpdateIsolatedMarginAction,
   ExchangeRequest,
   InfoRequest,
+  ExchangeAction,
 } from '../types';
 
 // Domain configurations for EIP-712 signing
@@ -105,9 +111,9 @@ export class HyperliquidClient {
     return ethers.keccak256(combined);
   }
 
-  // Sign L1 action (orders, cancels, leverage updates)
+  // Sign L1 action (orders, cancels, leverage updates, margin updates, etc.)
   async signL1Action(
-    action: PlaceOrderAction | CancelOrderAction | UpdateLeverageAction
+    action: ExchangeAction
   ): Promise<ExchangeRequest> {
     const nonce = Date.now();
     const hash = await this.actionHash(action, nonce);
@@ -144,7 +150,7 @@ export class HyperliquidClient {
 
   // Execute exchange action
   async exchange(
-    action: PlaceOrderAction | CancelOrderAction | UpdateLeverageAction
+    action: ExchangeAction
   ): Promise<unknown> {
     const signedRequest = await this.signL1Action(action);
 
@@ -208,5 +214,80 @@ export class HyperliquidClient {
 
   get signerAddress(): string {
     return this.wallet.address;
+  }
+
+  // ========== NEW INFO METHODS ==========
+
+  // Get candle snapshot (OHLCV data)
+  async getCandleSnapshot(
+    coin: string,
+    interval: string,
+    startTime: number,
+    endTime: number
+  ): Promise<unknown[]> {
+    return this.info({
+      type: 'candleSnapshot',
+      req: { coin, interval, startTime, endTime },
+    }) as Promise<unknown[]>;
+  }
+
+  // Get funding history for a coin
+  async getFundingHistory(
+    coin: string,
+    startTime: number,
+    endTime?: number
+  ): Promise<unknown[]> {
+    const request: InfoRequest = {
+      type: 'fundingHistory',
+      coin,
+      startTime,
+    };
+    if (endTime) {
+      request.endTime = endTime;
+    }
+    return this.info(request) as Promise<unknown[]>;
+  }
+
+  // Get predicted fundings
+  async getPredictedFundings(): Promise<unknown[]> {
+    return this.info({ type: 'predictedFundings' }) as Promise<unknown[]>;
+  }
+
+  // Get recent trades for a coin
+  async getRecentTrades(coin: string): Promise<unknown[]> {
+    return this.info({ type: 'recentTrades', coin }) as Promise<unknown[]>;
+  }
+
+  // Get meta and asset contexts (mark price, OI, funding in real-time)
+  async getMetaAndAssetCtxs(): Promise<unknown> {
+    return this.info({ type: 'metaAndAssetCtxs' });
+  }
+
+  // Get order status by OID
+  async getOrderStatus(oid: number): Promise<unknown> {
+    return this.info({ type: 'orderStatus', user: this.userAddress, oid });
+  }
+
+  // Get historical orders
+  async getHistoricalOrders(): Promise<unknown[]> {
+    return this.info({ type: 'historicalOrders', user: this.userAddress }) as Promise<unknown[]>;
+  }
+
+  // Get user funding history
+  async getUserFunding(startTime: number, endTime?: number): Promise<unknown[]> {
+    const request: InfoRequest = {
+      type: 'userFunding',
+      user: this.userAddress,
+      startTime,
+    };
+    if (endTime) {
+      request.endTime = endTime;
+    }
+    return this.info(request) as Promise<unknown[]>;
+  }
+
+  // Get user fees
+  async getUserFees(): Promise<unknown> {
+    return this.info({ type: 'userFees', user: this.userAddress });
   }
 }

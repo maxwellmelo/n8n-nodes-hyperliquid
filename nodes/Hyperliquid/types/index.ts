@@ -25,6 +25,34 @@ export interface CancelOrderAction {
   cancels: Array<{ a: number; o: number }>;
 }
 
+export interface CancelByCloidAction {
+  type: 'cancelByCloid';
+  cancels: Array<{ asset: number; cloid: string }>;
+}
+
+export interface ModifyOrderAction {
+  type: 'modify';
+  oid: number;
+  order: HyperliquidOrderWire;
+}
+
+export interface BatchModifyAction {
+  type: 'batchModify';
+  modifies: Array<{ oid: number; order: HyperliquidOrderWire }>;
+}
+
+export interface ScheduleCancelAction {
+  type: 'scheduleCancel';
+  time: number | null;
+}
+
+export interface UpdateIsolatedMarginAction {
+  type: 'updateIsolatedMargin';
+  asset: number;
+  isBuy: boolean;
+  ntli: number;
+}
+
 export interface UpdateLeverageAction {
   type: 'updateLeverage';
   asset: number;
@@ -39,7 +67,7 @@ export interface HyperliquidSignature {
 }
 
 export interface ExchangeRequest {
-  action: PlaceOrderAction | CancelOrderAction | UpdateLeverageAction;
+  action: PlaceOrderAction | CancelOrderAction | CancelByCloidAction | ModifyOrderAction | BatchModifyAction | ScheduleCancelAction | UpdateLeverageAction | UpdateIsolatedMarginAction;
   nonce: number;
   signature: HyperliquidSignature;
   vaultAddress?: string;
@@ -99,5 +127,130 @@ export interface InfoRequest {
   user?: string;
   coin?: string;
   startTime?: number;
+  endTime?: number;
+  oid?: number;
+  interval?: string;
   [key: string]: unknown;
 }
+
+// Candle data
+export interface Candle {
+  t: number;      // Timestamp (open time)
+  T: number;      // Close time
+  s: string;      // Symbol
+  i: string;      // Interval
+  o: string;      // Open price
+  c: string;      // Close price
+  h: string;      // High price
+  l: string;      // Low price
+  v: string;      // Volume
+  n: number;      // Number of trades
+}
+
+// Funding data
+export interface FundingHistory {
+  coin: string;
+  fundingRate: string;
+  premium: string;
+  time: number;
+}
+
+// Predicted funding
+export interface PredictedFunding {
+  coin: string;
+  fundingRate: string;
+  premium: string;
+  nextFundingTime: number;
+}
+
+// Recent trade
+export interface RecentTrade {
+  coin: string;
+  side: string;
+  px: string;
+  sz: string;
+  time: number;
+  hash: string;
+}
+
+// Asset context (mark price, OI, funding)
+export interface AssetCtx {
+  funding: string;
+  openInterest: string;
+  prevDayPx: string;
+  dayNtlVlm: string;
+  premium: string;
+  oraclePx: string;
+  markPx: string;
+  midPx: string;
+  impactPxs: string[];
+}
+
+export interface MetaAndAssetCtxs {
+  meta: Meta;
+  assetCtxs: AssetCtx[];
+}
+
+// Order status response
+export interface OrderStatusResponse {
+  order: {
+    coin: string;
+    limitPx: string;
+    oid: number;
+    side: string;
+    sz: string;
+    timestamp: number;
+    orderType: string;
+    origSz: string;
+    cloid?: string;
+  };
+  status: string;
+  statusTimestamp: number;
+}
+
+// Historical order
+export interface HistoricalOrder {
+  coin: string;
+  limitPx: string;
+  oid: number;
+  side: string;
+  sz: string;
+  timestamp: number;
+  orderType: string;
+  origSz: string;
+  cloid?: string;
+  status: string;
+  statusTimestamp: number;
+}
+
+// User funding entry
+export interface UserFundingEntry {
+  time: number;
+  coin: string;
+  usdc: string;
+  szi: string;
+  fundingRate: string;
+}
+
+// User fees
+export interface UserFees {
+  dailyUserVlm: string;
+  feeSchedule: {
+    taker: string;
+    maker: string;
+  };
+  userCrossRate: string;
+  userAddRate: string;
+  activeReferralDiscount: string;
+}
+
+// Exchange action types union (updated)
+export type ExchangeAction =
+  | PlaceOrderAction
+  | CancelOrderAction
+  | CancelByCloidAction
+  | ModifyOrderAction
+  | BatchModifyAction
+  | ScheduleCancelAction
+  | UpdateLeverageAction
+  | UpdateIsolatedMarginAction;

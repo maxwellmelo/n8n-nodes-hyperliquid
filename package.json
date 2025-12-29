@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-hyperliquid",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "n8n community node for Hyperliquid DEX - place orders, manage positions, and query market data on the Hyperliquid perpetual exchange",
   "keywords": [
     "n8n-community-node-package",

@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2024-12-29
+
+### Added
+
+#### Market Data (5 new operations)
+- **Get Candle Snapshot**: Historical OHLCV data with configurable intervals (1m to 1M)
+- **Get Funding History**: Historical funding rates for any asset
+- **Get Predicted Fundings**: Predicted next funding rates
+- **Get Recent Trades**: Recent market trades
+- **Get Meta And Asset Contexts**: Real-time mark price, open interest, and funding data
+
+#### User Data (4 new operations)
+- **Get Order Status**: Query status of a specific order by OID
+- **Get Historical Orders**: Complete order history
+- **Get User Funding**: User's funding payments history
+- **Get User Fees**: User's fee schedule and rates
+
+#### Advanced Orders (4 new operations)
+- **Modify Order**: Modify an existing order (price, size, etc.)
+- **Cancel by Client ID**: Cancel orders using custom client order IDs (CLOID)
+- **Schedule Cancel**: Dead man's switch - schedule automatic cancellation of all orders
+- **Update Isolated Margin**: Add or remove margin from isolated positions
+
+### Technical
+- Added 15+ new TypeScript interfaces for API responses
+- Extended HyperliquidClient with 9 new convenience methods
+- All existing functionality remains unchanged and backwards compatible
+
 ## [0.1.3] - 2024-12-16
 
 ### Fixed

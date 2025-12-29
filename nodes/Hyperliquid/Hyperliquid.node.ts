@@ -56,10 +56,15 @@ export class Hyperliquid implements INodeType {
           { name: 'Place Limit Order', value: 'limitOrder', action: 'Place limit order' },
           { name: 'Place Take Profit', value: 'takeProfit', action: 'Place take profit order' },
           { name: 'Place Stop Loss', value: 'stopLoss', action: 'Place stop loss order' },
+          { name: 'Modify Order', value: 'modifyOrder', action: 'Modify existing order' },
           { name: 'Cancel Order', value: 'cancel', action: 'Cancel order' },
+          { name: 'Cancel by Client ID', value: 'cancelByCloid', action: 'Cancel order by client ID' },
           { name: 'Cancel All Orders', value: 'cancelAll', action: 'Cancel all orders' },
+          { name: 'Schedule Cancel', value: 'scheduleCancel', action: 'Schedule cancel all orders' },
           { name: 'Get Open Orders', value: 'getOpen', action: 'Get open orders' },
+          { name: 'Get Order Status', value: 'getOrderStatus', action: 'Get specific order status' },
           { name: 'Get Order History', value: 'getHistory', action: 'Get order history' },
+          { name: 'Get Historical Orders', value: 'getHistoricalOrders', action: 'Get historical orders' },
         ],
         default: 'limitOrder',
       },
@@ -74,7 +79,7 @@ export class Hyperliquid implements INodeType {
         displayOptions: {
           show: {
             resource: ['order'],
-            operation: ['marketOrder', 'limitOrder', 'takeProfit', 'stopLoss', 'cancel'],
+            operation: ['marketOrder', 'limitOrder', 'takeProfit', 'stopLoss', 'cancel', 'cancelByCloid', 'modifyOrder'],
           },
         },
         description: 'Trading pair symbol (e.g., BTC for BTC-PERP)',
@@ -91,7 +96,7 @@ export class Hyperliquid implements INodeType {
         displayOptions: {
           show: {
             resource: ['order'],
-            operation: ['marketOrder', 'limitOrder', 'takeProfit', 'stopLoss'],
+            operation: ['marketOrder', 'limitOrder', 'takeProfit', 'stopLoss', 'modifyOrder'],
           },
         },
       },
@@ -104,7 +109,7 @@ export class Hyperliquid implements INodeType {
         displayOptions: {
           show: {
             resource: ['order'],
-            operation: ['marketOrder', 'limitOrder', 'takeProfit', 'stopLoss'],
+            operation: ['marketOrder', 'limitOrder', 'takeProfit', 'stopLoss', 'modifyOrder'],
           },
         },
         description: 'Order size in base asset units',
@@ -118,7 +123,7 @@ export class Hyperliquid implements INodeType {
         displayOptions: {
           show: {
             resource: ['order'],
-            operation: ['limitOrder'],
+            operation: ['limitOrder', 'modifyOrder'],
           },
         },
         description: 'Limit price for the order',
@@ -164,7 +169,7 @@ export class Hyperliquid implements INodeType {
         displayOptions: {
           show: {
             resource: ['order'],
-            operation: ['limitOrder'],
+            operation: ['limitOrder', 'modifyOrder'],
           },
         },
       },
@@ -176,7 +181,7 @@ export class Hyperliquid implements INodeType {
         displayOptions: {
           show: {
             resource: ['order'],
-            operation: ['limitOrder', 'marketOrder'],
+            operation: ['limitOrder', 'marketOrder', 'modifyOrder'],
           },
         },
         description: 'Whether order can only reduce an existing position',
@@ -189,10 +194,37 @@ export class Hyperliquid implements INodeType {
         displayOptions: {
           show: {
             resource: ['order'],
-            operation: ['cancel'],
+            operation: ['cancel', 'modifyOrder', 'getOrderStatus'],
           },
         },
-        description: 'The order ID to cancel',
+        description: 'The order ID to cancel or modify',
+      },
+      // ========== NEW ORDER PARAMETERS ==========
+      {
+        displayName: 'Client Order ID',
+        name: 'clientOrderId',
+        type: 'string',
+        default: '',
+        displayOptions: {
+          show: {
+            resource: ['order'],
+            operation: ['cancelByCloid'],
+          },
+        },
+        description: 'The client order ID (cloid) to cancel',
+      },
+      {
+        displayName: 'Cancel Time',
+        name: 'cancelTime',
+        type: 'number',
+        default: 0,
+        displayOptions: {
+          show: {
+            resource: ['order'],
+            operation: ['scheduleCancel'],
+          },
+        },
+        description: 'Unix timestamp (ms) to cancel all orders. Set to 0 to remove scheduled cancel. Must be at least 5 seconds in the future.',
       },
 
       // ========== POSITION OPERATIONS ==========
@@ -205,6 +237,7 @@ export class Hyperliquid implements INodeType {
         options: [
           { name: 'Get Open Positions', value: 'getPositions', action: 'Get open positions' },
           { name: 'Update Leverage', value: 'updateLeverage', action: 'Update leverage' },
+          { name: 'Update Isolated Margin', value: 'updateIsolatedMargin', action: 'Update isolated margin' },
           { name: 'Get Trade History', value: 'getTradeHistory', action: 'Get trade history' },
         ],
         default: 'getPositions',
@@ -218,10 +251,10 @@ export class Hyperliquid implements INodeType {
         displayOptions: {
           show: {
             resource: ['position'],
-            operation: ['updateLeverage'],
+            operation: ['updateLeverage', 'updateIsolatedMargin'],
           },
         },
-        description: 'Asset to update leverage for',
+        description: 'Asset to update leverage or margin for',
       },
       {
         displayName: 'Leverage',
@@ -252,6 +285,38 @@ export class Hyperliquid implements INodeType {
           },
         },
       },
+      // ========== UPDATE ISOLATED MARGIN PARAMETERS ==========
+      {
+        displayName: 'Position Side',
+        name: 'positionSide',
+        type: 'options',
+        options: [
+          { name: 'Long', value: 'long' },
+          { name: 'Short', value: 'short' },
+        ],
+        default: 'long',
+        displayOptions: {
+          show: {
+            resource: ['position'],
+            operation: ['updateIsolatedMargin'],
+          },
+        },
+        description: 'The side of the position to adjust margin for',
+      },
+      {
+        displayName: 'Margin Delta',
+        name: 'marginDelta',
+        type: 'number',
+        default: 0,
+        typeOptions: { numberPrecision: 2 },
+        displayOptions: {
+          show: {
+            resource: ['position'],
+            operation: ['updateIsolatedMargin'],
+          },
+        },
+        description: 'Amount to add (positive) or remove (negative) from isolated margin',
+      },
 
       // ========== ACCOUNT OPERATIONS ==========
       {
@@ -263,8 +328,37 @@ export class Hyperliquid implements INodeType {
         options: [
           { name: 'Get Balance', value: 'getBalance', action: 'Get account balance' },
           { name: 'Get Margin Summary', value: 'getMarginSummary', action: 'Get margin summary' },
+          { name: 'Get User Funding', value: 'getUserFunding', action: 'Get user funding history' },
+          { name: 'Get User Fees', value: 'getUserFees', action: 'Get user fees' },
         ],
         default: 'getBalance',
+      },
+      // ========== ACCOUNT PARAMETERS ==========
+      {
+        displayName: 'Start Time',
+        name: 'fundingStartTime',
+        type: 'number',
+        default: 0,
+        displayOptions: {
+          show: {
+            resource: ['account'],
+            operation: ['getUserFunding'],
+          },
+        },
+        description: 'Start timestamp in milliseconds for funding history',
+      },
+      {
+        displayName: 'End Time',
+        name: 'fundingEndTime',
+        type: 'number',
+        default: 0,
+        displayOptions: {
+          show: {
+            resource: ['account'],
+            operation: ['getUserFunding'],
+          },
+        },
+        description: 'End timestamp in milliseconds for funding history (optional, 0 = now)',
       },
 
       // ========== MARKET DATA OPERATIONS ==========
@@ -278,7 +372,12 @@ export class Hyperliquid implements INodeType {
           { name: 'Get All Prices', value: 'getAllMids', action: 'Get all mid prices' },
           { name: 'Get Asset Price', value: 'getAssetPrice', action: 'Get specific asset price' },
           { name: 'Get Asset Metadata', value: 'getMeta', action: 'Get asset metadata' },
+          { name: 'Get Meta And Asset Contexts', value: 'getMetaAndAssetCtxs', action: 'Get metadata with mark price, OI, funding' },
           { name: 'Get Order Book', value: 'getOrderBook', action: 'Get order book' },
+          { name: 'Get Candle Snapshot', value: 'getCandleSnapshot', action: 'Get candle history (OHLCV)' },
+          { name: 'Get Funding History', value: 'getFundingHistory', action: 'Get funding rate history' },
+          { name: 'Get Predicted Fundings', value: 'getPredictedFundings', action: 'Get predicted funding rates' },
+          { name: 'Get Recent Trades', value: 'getRecentTrades', action: 'Get recent trades' },
         ],
         default: 'getAllMids',
       },
@@ -290,9 +389,65 @@ export class Hyperliquid implements INodeType {
         displayOptions: {
           show: {
             resource: ['marketData'],
-            operation: ['getAssetPrice', 'getOrderBook'],
+            operation: ['getAssetPrice', 'getOrderBook', 'getCandleSnapshot', 'getFundingHistory', 'getRecentTrades'],
           },
         },
+      },
+      // ========== CANDLE PARAMETERS ==========
+      {
+        displayName: 'Interval',
+        name: 'candleInterval',
+        type: 'options',
+        options: [
+          { name: '1 Minute', value: '1m' },
+          { name: '3 Minutes', value: '3m' },
+          { name: '5 Minutes', value: '5m' },
+          { name: '15 Minutes', value: '15m' },
+          { name: '30 Minutes', value: '30m' },
+          { name: '1 Hour', value: '1h' },
+          { name: '2 Hours', value: '2h' },
+          { name: '4 Hours', value: '4h' },
+          { name: '8 Hours', value: '8h' },
+          { name: '12 Hours', value: '12h' },
+          { name: '1 Day', value: '1d' },
+          { name: '3 Days', value: '3d' },
+          { name: '1 Week', value: '1w' },
+          { name: '1 Month', value: '1M' },
+        ],
+        default: '1h',
+        displayOptions: {
+          show: {
+            resource: ['marketData'],
+            operation: ['getCandleSnapshot'],
+          },
+        },
+        description: 'Candle interval/timeframe',
+      },
+      {
+        displayName: 'Start Time',
+        name: 'candleStartTime',
+        type: 'number',
+        default: 0,
+        displayOptions: {
+          show: {
+            resource: ['marketData'],
+            operation: ['getCandleSnapshot', 'getFundingHistory'],
+          },
+        },
+        description: 'Start timestamp in milliseconds',
+      },
+      {
+        displayName: 'End Time',
+        name: 'candleEndTime',
+        type: 'number',
+        default: 0,
+        displayOptions: {
+          show: {
+            resource: ['marketData'],
+            operation: ['getCandleSnapshot', 'getFundingHistory'],
+          },
+        },
+        description: 'End timestamp in milliseconds (0 = now)',
       },
     ],
   };
@@ -513,6 +668,60 @@ export class Hyperliquid implements INodeType {
           if (operation === 'getHistory') {
             result = await client.getUserFills();
           }
+
+          // ========== NEW ORDER OPERATIONS ==========
+          if (operation === 'modifyOrder') {
+            const asset = this.getNodeParameter('asset', i) as string;
+            const orderId = this.getNodeParameter('orderId', i) as number;
+            const side = this.getNodeParameter('side', i) as string;
+            const size = this.getNodeParameter('size', i) as number;
+            const limitPrice = this.getNodeParameter('price', i) as number;
+            const tif = this.getNodeParameter('timeInForce', i) as 'Gtc' | 'Ioc' | 'Alo';
+            const reduceOnly = this.getNodeParameter('reduceOnly', i) as boolean;
+
+            const order: HyperliquidOrderWire = {
+              a: getAssetIndex(asset),
+              b: side === 'buy',
+              p: formatPrice(limitPrice),
+              s: formatNumber(size),
+              r: reduceOnly,
+              t: { limit: { tif } },
+            };
+
+            result = await client.exchange({
+              type: 'modify',
+              oid: orderId,
+              order,
+            });
+          }
+
+          if (operation === 'cancelByCloid') {
+            const asset = this.getNodeParameter('asset', i) as string;
+            const clientOrderId = this.getNodeParameter('clientOrderId', i) as string;
+
+            result = await client.exchange({
+              type: 'cancelByCloid',
+              cancels: [{ asset: getAssetIndex(asset), cloid: clientOrderId }],
+            });
+          }
+
+          if (operation === 'scheduleCancel') {
+            const cancelTime = this.getNodeParameter('cancelTime', i) as number;
+
+            result = await client.exchange({
+              type: 'scheduleCancel',
+              time: cancelTime === 0 ? null : cancelTime,
+            });
+          }
+
+          if (operation === 'getOrderStatus') {
+            const orderId = this.getNodeParameter('orderId', i) as number;
+            result = await client.getOrderStatus(orderId);
+          }
+
+          if (operation === 'getHistoricalOrders') {
+            result = await client.getHistoricalOrders();
+          }
         }
 
         // ========== POSITION OPERATIONS ==========
@@ -540,22 +749,47 @@ export class Hyperliquid implements INodeType {
           if (operation === 'getTradeHistory') {
             result = await client.getUserFills();
           }
+
+          if (operation === 'updateIsolatedMargin') {
+            const asset = this.getNodeParameter('positionAsset', i) as string;
+            const positionSide = this.getNodeParameter('positionSide', i) as string;
+            const marginDelta = this.getNodeParameter('marginDelta', i) as number;
+
+            result = await client.exchange({
+              type: 'updateIsolatedMargin',
+              asset: getAssetIndex(asset),
+              isBuy: positionSide === 'long',
+              ntli: marginDelta,
+            });
+          }
         }
 
         // ========== ACCOUNT OPERATIONS ==========
         if (resource === 'account') {
-          const state = await client.getClearinghouseState() as ClearinghouseState;
+          if (operation === 'getBalance' || operation === 'getMarginSummary') {
+            const state = await client.getClearinghouseState() as ClearinghouseState;
 
-          if (operation === 'getBalance') {
-            result = {
-              accountValue: state.marginSummary.accountValue,
-              totalRawUsd: state.marginSummary.totalRawUsd,
-              withdrawable: state.withdrawable,
-            };
+            if (operation === 'getBalance') {
+              result = {
+                accountValue: state.marginSummary.accountValue,
+                totalRawUsd: state.marginSummary.totalRawUsd,
+                withdrawable: state.withdrawable,
+              };
+            }
+
+            if (operation === 'getMarginSummary') {
+              result = state.marginSummary;
+            }
           }
 
-          if (operation === 'getMarginSummary') {
-            result = state.marginSummary;
+          if (operation === 'getUserFunding') {
+            const startTime = this.getNodeParameter('fundingStartTime', i) as number;
+            const endTime = this.getNodeParameter('fundingEndTime', i) as number;
+            result = await client.getUserFunding(startTime, endTime || undefined);
+          }
+
+          if (operation === 'getUserFees') {
+            result = await client.getUserFees();
           }
         }
 
@@ -584,6 +818,46 @@ export class Hyperliquid implements INodeType {
               type: 'l2Book',
               coin: asset.toUpperCase(),
             });
+          }
+
+          // ========== NEW MARKET DATA OPERATIONS ==========
+          if (operation === 'getMetaAndAssetCtxs') {
+            result = await client.getMetaAndAssetCtxs();
+          }
+
+          if (operation === 'getCandleSnapshot') {
+            const asset = this.getNodeParameter('marketAsset', i) as string;
+            const interval = this.getNodeParameter('candleInterval', i) as string;
+            const startTime = this.getNodeParameter('candleStartTime', i) as number;
+            const endTime = this.getNodeParameter('candleEndTime', i) as number;
+
+            result = await client.getCandleSnapshot(
+              asset.toUpperCase(),
+              interval,
+              startTime,
+              endTime || Date.now()
+            );
+          }
+
+          if (operation === 'getFundingHistory') {
+            const asset = this.getNodeParameter('marketAsset', i) as string;
+            const startTime = this.getNodeParameter('candleStartTime', i) as number;
+            const endTime = this.getNodeParameter('candleEndTime', i) as number;
+
+            result = await client.getFundingHistory(
+              asset.toUpperCase(),
+              startTime,
+              endTime || undefined
+            );
+          }
+
+          if (operation === 'getPredictedFundings') {
+            result = await client.getPredictedFundings();
+          }
+
+          if (operation === 'getRecentTrades') {
+            const asset = this.getNodeParameter('marketAsset', i) as string;
+            result = await client.getRecentTrades(asset.toUpperCase());
           }
         }
 
