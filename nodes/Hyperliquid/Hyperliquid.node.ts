@@ -236,6 +236,7 @@ export class Hyperliquid implements INodeType {
         displayOptions: { show: { resource: ['position'] } },
         options: [
           { name: 'Get Open Positions', value: 'getPositions', action: 'Get open positions' },
+          { name: 'Close Position', value: 'closePosition', action: 'Close position with market order' },
           { name: 'Update Leverage', value: 'updateLeverage', action: 'Update leverage' },
           { name: 'Update Isolated Margin', value: 'updateIsolatedMargin', action: 'Update isolated margin' },
           { name: 'Get Trade History', value: 'getTradeHistory', action: 'Get trade history' },
@@ -251,10 +252,24 @@ export class Hyperliquid implements INodeType {
         displayOptions: {
           show: {
             resource: ['position'],
-            operation: ['updateLeverage', 'updateIsolatedMargin'],
+            operation: ['updateLeverage', 'updateIsolatedMargin', 'closePosition'],
           },
         },
         description: 'Asset to update leverage or margin for',
+      },
+      {
+        displayName: 'Slippage %',
+        name: 'closeSlippage',
+        type: 'number',
+        default: 0.5,
+        typeOptions: { minValue: 0.1, maxValue: 10 },
+        displayOptions: {
+          show: {
+            resource: ['position'],
+            operation: ['closePosition'],
+          },
+        },
+        description: 'Maximum slippage tolerance for close position market order',
       },
       {
         displayName: 'Leverage',
@@ -748,6 +763,52 @@ export class Hyperliquid implements INodeType {
 
           if (operation === 'getTradeHistory') {
             result = await client.getUserFills();
+          }
+
+          if (operation === 'closePosition') {
+            const asset = this.getNodeParameter('positionAsset', i) as string;
+            const slippage = this.getNodeParameter('closeSlippage', i) as number;
+
+            // Get current position for this asset
+            const state = await client.getClearinghouseState() as ClearinghouseState;
+            const position = state.assetPositions.find(
+              (pos: AssetPosition) => pos.position.coin.toUpperCase() === asset.toUpperCase()
+            );
+
+            if (!position || parseFloat(position.position.szi) === 0) {
+              throw new NodeOperationError(this.getNode(), `No open position found for ${asset}`);
+            }
+
+            const positionSize = parseFloat(position.position.szi);
+            const isLong = positionSize > 0;
+            const size = Math.abs(positionSize);
+
+            // Get current price for slippage calculation
+            const mids = await client.getAllMids();
+            const midPrice = parseFloat(mids[asset.toUpperCase()]);
+            if (!midPrice) {
+              throw new NodeOperationError(this.getNode(), `No price found for ${asset}`);
+            }
+
+            // To close: if long, sell; if short, buy
+            // Calculate aggressive price with slippage
+            const slippageMultiplier = isLong ? 1 - slippage / 100 : 1 + slippage / 100;
+            const price = midPrice * slippageMultiplier;
+
+            const order: HyperliquidOrderWire = {
+              a: getAssetIndex(asset),
+              b: !isLong, // Opposite side to close
+              p: formatPrice(price),
+              s: formatNumber(size),
+              r: true, // Always reduce only for close
+              t: { limit: { tif: 'Ioc' } }, // IOC for market-like execution
+            };
+
+            result = await client.exchange({
+              type: 'order',
+              orders: [order],
+              grouping: 'na',
+            });
           }
 
           if (operation === 'updateIsolatedMargin') {

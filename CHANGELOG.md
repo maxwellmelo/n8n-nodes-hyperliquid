@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2024-12-29
+
+### Added
+- **Close Position**: Automatically close an entire position with a market order
+  - Detects position size and direction automatically
+  - Places opposite-side IOC order with configurable slippage
+  - Uses reduce-only to ensure position closure
+
 ## [0.2.0] - 2024-12-29
 
 ### Added
